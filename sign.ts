@@ -5,7 +5,8 @@ import {
     EvmChains,
     IndexService,
     decodeOnChainData,
-    DataLocationOnChain
+    DataLocationOnChain,
+    delegateSignAttestation
     // delegateSignAttestation,
     // delegateSignRevokeAttestation,
     // delegateSignSchema,
@@ -16,8 +17,8 @@ import {
     
   const chainId = 84532
 
-  const recipient = privateKeyToAccount(generatePrivateKey());
-  const sender = privateKeyToAccount(generatePrivateKey());
+  const eoa = privateKeyToAccount(generatePrivateKey());
+  const owner = privateKeyToAccount(generatePrivateKey());
 
   const client = new SignProtocolClient(SpMode.OnChain, {
     chain: EvmChains.baseSepolia,
@@ -25,6 +26,7 @@ import {
   });
 
   async function main() { 
+    console.log(generatePrivateKey())
     // Create schema
   // const createSchemaRes = await client.createSchema({
   //   name: "approval",
@@ -38,26 +40,26 @@ import {
   }
 
 
-  // const info = await delegateSignAttestation(
-  //   {
-  //     schemaId: schema.schemaId,
-  //     data: { nft_id: "1" },
-  //     recipients: [recipient.address],
-  //     indexingValue: sender.address + recipient.address,
-  //   },
-  //   {
-  //     chain: EvmChains.baseSepolia,
-  //     delegationAccount: sender,
-  //   }
-  // );
+  const info = await delegateSignAttestation(
+    {
+      schemaId: schema.schemaId,
+      data: { nft_id: "*" },
+      recipients: [eoa.address],
+      indexingValue: `connect:${owner.address}:${eoa.address}`,
+    },
+    {
+      chain: EvmChains.baseSepolia,
+      delegationAccount: owner,
+    }
+  );
 
-  // const delegationCreateAttestationRes = await client.createAttestation(
-  //   info.attestation,
-  //   {
-  //     delegationSignature: info.delegationSignature,
-  //   }
-  // );
-  // console.log(delegationCreateAttestationRes);
+  const delegationCreateAttestationRes = await client.createAttestation(
+    info.attestation,
+    {
+      delegationSignature: info.delegationSignature,
+    }
+  );
+  console.log(delegationCreateAttestationRes);
   // {
   //   attestationId: '0xb74',
   //   txHash: '0xe6b26738f8cf6f5de0b381773dd07e7ca2eaab8cbc7bc9927b316d56a9c607c7',
@@ -68,17 +70,17 @@ import {
   // const attestation = await client.getAttestation(schema.schemaId, schema.txHash)
 
 
-  const res = await indexService.queryAttestationList({
-    schemaId: `onchain_evm_${chainId}_${schema.schemaId}`, // Your full schema's ID
-    // attester: sender.address, // Alice's address
-    page: 1,
-    mode: "onchain", // Data storage location
-    // indexingValue: recipient.address.toLowerCase(), // Bob's address
-  });
+  // const res = await indexService.queryAttestationList({
+  //   schemaId: `onchain_evm_${chainId}_${schema.schemaId}`, // Your full schema's ID
+  //   // attester: sender.address, // Alice's address
+  //   page: 1,
+  //   mode: "onchain", // Data storage location
+  //   // indexingValue: recipient.address.toLowerCase(), // Bob's address
+  // });
 
-  const decoded = decodeOnChainData(res?.rows[0].data, DataLocationOnChain.ONCHAIN, [{name: "nft_id", type: "string"}])
+  // const decoded = decodeOnChainData(res?.rows[0].data, DataLocationOnChain.ONCHAIN, [{name: "nft_id", type: "string"}])
 
-  console.log(decoded)
+  // console.log(decoded)
 }
   
 
