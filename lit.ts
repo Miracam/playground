@@ -17,17 +17,36 @@ export const litNetwork = LitNetwork.DatilTest;
 export const chain = "ethereum";
 export const litRpc = LIT_RPC.CHRONICLE_YELLOWSTONE;
 
-const accessControlConditions: AccessControlConditions = [
-    {
-        "contractAddress": "",
-        "standardContractType": "",
-        "chain": "ethereum",
-        "method": "",
-        "parameters": ["9541"],
-        "returnValueTest": { "comparator": "=", "value": "9541" }
-    }
-]
+function getAccessControlConditions(owner: string) {
 
+    // const accessControlConditions: AccessControlConditions = [
+    //   {
+    //     "contractAddress": "",
+    //     "standardContractType": "",
+    //     "chain": "ethereum",
+    //     "method": "",
+    //     "parameters": [ "9541" ],
+    //     "returnValueTest": { "comparator": "=", "value": "9541" }
+    //   }
+    // ]
+
+
+
+    const accessControlConditions: AccessControlConditions = [
+        {
+            contractAddress: "ipfs://QmXpq4g4qynf423bhbFqmpCDBfbCRSVxnVcPy1ArCxLHsj",
+            standardContractType: "LitAction",
+            chain,
+            method: "go",
+            parameters: [":userAddress", owner],
+            returnValueTest: {
+                comparator: "=",
+                value: "true",
+            },
+        },
+    ];
+    return accessControlConditions
+}
 
 class Lit {
 
@@ -183,11 +202,11 @@ class Lit {
         return authSig;
     }
 
-    async encrypt(message: string) {
+    async encrypt(message: string, owner: ethers.Wallet) {
         // Encrypt the message
         const { ciphertext, dataToEncryptHash } = await LitJsSdk.encryptString(
             {
-                accessControlConditions,
+                accessControlConditions: getAccessControlConditions(owner.address),
                 dataToEncrypt: message,
             },
             this.litNodeClient,
@@ -254,17 +273,17 @@ class Lit {
     //  return sessionSigs;
     // }
 
-    async decrypt(ciphertext: string, dataToEncryptHash: string, wallet: ethers.Wallet, capacityDelegationAuthSig?: AuthSig) {
+    async decrypt(ciphertext: string, dataToEncryptHash: string, eoa: ethers.Wallet, owner: string, capacityDelegationAuthSig?: AuthSig) {
 
         // Decrypt the message
         const decryptedString = await LitJsSdk.decryptToString(
             {
-                accessControlConditions,
+                accessControlConditions: getAccessControlConditions(owner),
                 chain,
                 ciphertext,
                 dataToEncryptHash,
                 // sessionSigs: await this.getSessionSignatures(wallet, capacityDelegationAuthSig),
-                authSig: await this.getAuthSig(wallet),
+                authSig: await this.getAuthSig(eoa),
             },
             this.litNodeClient,
         );
@@ -279,10 +298,11 @@ export default Lit;
 async function test() {
     const lit = new Lit();
     await lit.connect();
-    const wallet = ethers.Wallet.createRandom();
-    const { ciphertext, dataToEncryptHash } = await lit.encrypt("hello");
+    const eoa = ethers.Wallet.createRandom();
+    const owner = ethers.Wallet.createRandom();
+    const { ciphertext, dataToEncryptHash } = await lit.encrypt("hello", owner);
     // console.log(ciphertext, dataToEncryptHash);
-    const decryptedString = await lit.decrypt(ciphertext, dataToEncryptHash, wallet);
+    const decryptedString = await lit.decrypt(ciphertext, dataToEncryptHash, eoa, owner.address);
     console.log(decryptedString);
     // const authSig = await lit.getAuthSig(wallet);
     // console.log(authSig);
